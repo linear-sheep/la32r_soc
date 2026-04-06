@@ -1,5 +1,24 @@
-/sdk/
-/test/
+# ======= 根目录及 FPGA 测试 =======
 /fpga/*
 !/fpga/constraints/
 !/fpga/create_project.tcl
+
+# ======= SDK 核心忽略规则 =======
+# 忽略编译过程产生的 obj 文件夹
+/sdk/**/obj/
+
+# 忽略所有生成的二进制、反汇编与内存映射等编译产物
+/sdk/**/*.o
+/sdk/**/*.elf
+/sdk/**/*.bin
+/sdk/**/*.mif
+/sdk/**/*.coe
+/sdk/**/*.vlog
+# 忽略编译出的汇编文件(反汇编产物 .s)
+/sdk/**/*.s 
+
+# 忽略 host 端生成的转换工具
+/sdk/**/convert
+
+# 强烈建议：忽略庞大的交叉编译工具链文件夹（但保留工具链包里的脚本或压缩包说明）
+/sdk/toolchain/
