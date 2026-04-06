@@ -1,1 +1,5 @@
 /sdk/
+/test/
+/fpga/*
+!/fpga/constraints/
+!/fpga/create_project.tcl

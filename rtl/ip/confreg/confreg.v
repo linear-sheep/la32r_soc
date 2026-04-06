@@ -351,6 +351,135 @@ end
 
 //-------------------------------{int_ctrl}begin----------------------------//
 //add your code
+// 中断源集合: 低5位有效
+// [3:0] - 按键中断 (touch_btn_data[3:0])
+// [4]   - 定时器中断 (timer_int)
+integer i;  // 循环计数器
+wire [31:0] int_in = {27'b0, timer_int, touch_btn_data[3:0]};
+
+// 寄存器写入逻辑
+wire write_int_en   = w_enter & (buf_addr[15:0] == `CONFREG_INT_ADDR + 16'h0);
+wire write_int_edge = w_enter & (buf_addr[15:0] == `CONFREG_INT_ADDR + 16'h4);
+wire write_int_pol  = w_enter & (buf_addr[15:0] == `CONFREG_INT_ADDR + 16'h8);
+wire write_int_clr  = w_enter & (buf_addr[15:0] == `CONFREG_INT_ADDR + 16'hc);
+wire write_int_set  = w_enter & (buf_addr[15:0] == `CONFREG_INT_ADDR + 16'h10);
+
+// 中断寄存器写入
+always @(posedge aclk) begin
+    if (!aresetn) begin
+        confreg_int_en   <= 32'h0;
+        confreg_int_edge <= 32'h0;
+        confreg_int_pol  <= 32'h0;
+    end
+    else begin
+        if (write_int_en)
+            confreg_int_en <= s_wdata[31:0];
+        if (write_int_edge)
+            confreg_int_edge <= s_wdata[31:0];
+        if (write_int_pol)
+            confreg_int_pol <= s_wdata[31:0];
+    end
+end
+
+// 上升沿检测逻辑 - 用于清除和置位的控制
+reg [31:0] int_clr_sync1, int_clr_sync2;
+reg [31:0] int_set_sync1, int_set_sync2;
+
+always @(posedge aclk) begin
+    if (!aresetn) begin
+        confreg_int_clr <= 32'h0;
+        confreg_int_set <= 32'h0;
+    end
+    else begin
+        if (write_int_clr)
+            confreg_int_clr <= s_wdata[31:0];
+        else
+            confreg_int_clr <= 32'h0;
+            
+        if (write_int_set)
+            confreg_int_set <= s_wdata[31:0];
+        else
+            confreg_int_set <= 32'h0;
+    end
+end
+
+// 中断状态跟踪 - 对于每个中断位进行边沿和电平处理
+reg [31:0] int_state_r, int_state_edge;
+reg [31:0] int_in_r, int_in_r2;
+
+always @(posedge aclk) begin
+    if (!aresetn) begin
+        int_in_r  <= 32'h0;
+        int_in_r2 <= 32'h0;
+        int_state_r <= 32'h0;
+        int_state_edge <= 32'h0;
+    end
+    else begin
+        int_in_r  <= int_in;
+        int_in_r2 <= int_in_r;
+        
+        // 对每一位处理中断逻辑
+        for (i = 0; i < 32; i = i + 1) begin
+            if (confreg_int_edge[i]) begin
+                // 边沿触发模式
+                if (confreg_int_pol[i]) begin
+                    // 上升沿触发
+                    if (~int_in_r2[i] & int_in_r[i])
+                        int_state_edge[i] <= 1'b1;
+                end
+                else begin
+                    // 下降沿触发
+                    if (int_in_r2[i] & ~int_in_r[i])
+                        int_state_edge[i] <= 1'b1;
+                end
+                
+                // int_clr清除中断
+                if (confreg_int_clr[i])
+                    int_state_edge[i] <= 1'b0;
+                // int_set置位中断
+                if (confreg_int_set[i])
+                    int_state_edge[i] <= 1'b1;
+                    
+                int_state_r[i] <= int_state_edge[i];
+            end
+            else begin
+                // 电平触发模式
+                if (confreg_int_pol[i]) begin
+                    // 高电平触发
+                    int_state_r[i] <= int_in[i];
+                end
+                else begin
+                    // 低电平触发
+                    int_state_r[i] <= ~int_in[i];
+                end
+            end
+        end
+    end
+end
+
+// 中断状态输出
+assign confreg_int_state = int_state_r;
+
+// 最终中断输出逻辑：中断使能 AND 中断状态，然后进行或操作
+wire [31:0] int_out = confreg_int_en & int_state_r;
+wire confreg_int_comb = |int_out; // 所有中断进行或操作
+
+// 延迟级联处理异步中断
+reg confreg_int_sync1, confreg_int_sync2, confreg_int_sync3;
+always @(posedge aclk) begin
+    if (!aresetn) begin
+        confreg_int_sync1 <= 1'b0;
+        confreg_int_sync2 <= 1'b0;
+        confreg_int_sync3 <= 1'b0;
+    end
+    else begin
+        confreg_int_sync1 <= confreg_int_comb;
+        confreg_int_sync2 <= confreg_int_sync1;
+        confreg_int_sync3 <= confreg_int_sync2;
+    end
+end
+
+assign confreg_int = confreg_int_sync3;
 
 //--------------------------------{int_ctrl}end-----------------------------//
 

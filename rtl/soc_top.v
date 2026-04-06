@@ -523,17 +523,17 @@ wire [1 :0] dvi_bresp  ;
 wire        dvi_bvalid ;
 wire        dvi_bready ;
 
-assign dvi_arready  = 1'b1;
-assign dvi_rid      = 5'b0;
-assign dvi_rdata    = 32'b0;
-assign dvi_rresp    = 2'b0;
-assign dvi_rlast    = 1'b0;
-assign dvi_rvalid   = 1'b0;
-assign dvi_awready  = 1'b1;
-assign dvi_wready   = 1'b1;
-assign dvi_bid      = 5'b0;
-assign dvi_bresp    = 2'b0;
-assign dvi_bvalid   = 1'b0;
+// assign dvi_arready  = 1'b1;
+// assign dvi_rid      = 5'b0;
+// assign dvi_rdata    = 32'b0;
+// assign dvi_rresp    = 2'b0;
+// assign dvi_rlast    = 1'b0;
+// assign dvi_rvalid   = 1'b0;
+// assign dvi_awready  = 1'b1;
+// assign dvi_wready   = 1'b1;
+// assign dvi_bid      = 5'b0;
+// assign dvi_bresp    = 2'b0;
+// assign dvi_bvalid   = 1'b0;
 
 //axi confreg
 wire [4 :0] confreg_arid   ;
@@ -1103,10 +1103,9 @@ AxiCrossbar_2x8  u_AxiCrossbar_2x8 (
 
 );
 
-// add your code
-// OpenLA500 core
 core_top u_cpu(
-    .intrpt     (8'h0          ), // high active
+    // .intrpt     (8'h0          ), // high active
+    .intrpt     (cpu_intrpt_sync2), //high active
 
     .aclk       (cpu_clk       ),
     .aresetn    (cpu_resetn    ), // low active
@@ -1163,86 +1162,93 @@ core_top u_cpu(
     .debug0_wb_inst     (debug_wb_inst     ),
     .debug0_wb_rf_wen   (debug_wb_rf_wen   ),
     .debug0_wb_rf_wnum  (debug_wb_rf_wnum  ),
-    .debug0_wb_rf_wdata  (debug_wb_rf_wdata )
+    .debug_wb_rf_wdata  (debug_wb_rf_wdata )
 );
 
 // clock sync: from CPU to AXI_Crossbar
 Axi_CDC u_Axi_CDC (
-    .axiInClk       ( cpu_clk        ),
-    .axiInRstn      ( cpu_resetn     ),
+    .axiInClk       ( cpu_clk                          ),
+    .axiInRstn      ( cpu_resetn                       ),
+    .axiOutClk      ( sys_clk                          ),
+    .axiOutRstn     ( sys_resetn                       ),
 
-    .axiOutClk      ( sys_clk        ),
-    .axiOutRstn     ( sys_resetn     ),
+    .axiIn_awvalid  ( cpu_awvalid                      ),
+    .axiIn_awaddr   ( cpu_awaddr                       ),
+    .axiIn_awid     ( {1'b0, cpu_awid}                 ),
+    .axiIn_awlen    ( cpu_awlen                        ),
+    .axiIn_awsize   ( cpu_awsize                       ),
+    .axiIn_awburst  ( cpu_awburst                      ),
+    .axiIn_awlock   ( cpu_awlock[0]                    ),
+    .axiIn_awcache  ( cpu_awcache                      ),
+    .axiIn_awprot   ( cpu_awprot                       ),
+    .axiIn_wvalid   ( cpu_wvalid                       ),
+    .axiIn_wdata    ( cpu_wdata                        ),
+    .axiIn_wstrb    ( cpu_wstrb                        ),
+    .axiIn_wlast    ( cpu_wlast                        ),
+    .axiIn_bready   ( cpu_bready                       ),
+    .axiIn_arvalid  ( cpu_arvalid                      ),
+    .axiIn_araddr   ( cpu_araddr                       ),
+    .axiIn_arid     ( {1'b0, cpu_arid}                 ),
+    .axiIn_arlen    ( cpu_arlen                        ),
+    .axiIn_arsize   ( cpu_arsize                       ),
+    .axiIn_arburst  ( cpu_arburst                      ),
+    .axiIn_arlock   ( cpu_arlock[0]                    ),
+    .axiIn_arcache  ( cpu_arcache                      ),
+    .axiIn_arprot   ( cpu_arprot                       ),
+    .axiIn_rready   ( cpu_rready                       ),
+    .axiOut_awready ( cpu_sync_awready                 ),
+    .axiOut_wready  ( cpu_sync_wready                  ),
+    .axiOut_bvalid  ( cpu_sync_bvalid                  ),
+    .axiOut_bid     ( {1'b0, cpu_sync_bid}             ),
+    .axiOut_bresp   ( cpu_sync_bresp                   ),
+    .axiOut_arready ( cpu_sync_arready                 ),
+    .axiOut_rvalid  ( cpu_sync_rvalid                  ),
+    .axiOut_rdata   ( cpu_sync_rdata                   ),
+    .axiOut_rid     ( {1'b0, cpu_sync_rid}             ),
+    .axiOut_rresp   ( cpu_sync_rresp                   ),
+    .axiOut_rlast   ( cpu_sync_rlast                   ),
 
-    .axiIn_awvalid  ( cpu_awvalid    ),
-    .axiIn_awaddr   ( cpu_awaddr     ),
-    .axiIn_awid     ( {1'b0, cpu_awid} ),
-    .axiIn_awlen    ( cpu_awlen      ),
-    .axiIn_awsize   ( cpu_awsize     ),
-    .axiIn_awburst  ( cpu_awburst    ),
-    .axiIn_awlock   ( cpu_awlock[0]  ),
-    .axiIn_awcache  ( cpu_awcache    ),
-    .axiIn_awprot   ( cpu_awprot     ),
-    .axiIn_wvalid   ( cpu_wvalid     ),
-    .axiIn_wdata    ( cpu_wdata      ),
-    .axiIn_wstrb    ( cpu_wstrb      ),
-    .axiIn_wlast    ( cpu_wlast      ),
-    .axiIn_bready   ( cpu_bready     ),
-
-    .axiIn_arvalid  ( cpu_arvalid    ),
-    .axiIn_araddr   ( cpu_araddr     ),
-    .axiIn_arid     ( {1'b0, cpu_arid} ),
-    .axiIn_arlen    ( cpu_arlen      ),
-    .axiIn_arsize   ( cpu_arsize     ),
-    .axiIn_arburst  ( cpu_arburst    ),
-    .axiIn_arlock   ( cpu_arlock[0]  ),
-    .axiIn_arcache  ( cpu_arcache    ),
-    .axiIn_arprot   ( cpu_arprot     ),
-    .axiIn_rready   ( cpu_rready     ),
-
-    .axiOut_awready ( cpu_sync_awready ),
-    .axiOut_wready  ( cpu_sync_wready  ),
-    .axiOut_bvalid  ( cpu_sync_bvalid  ),
-    .axiOut_bid     ( {1'b0, cpu_sync_bid} ),
-    .axiOut_bresp   ( cpu_sync_bresp   ),
-    .axiOut_bready  ( cpu_sync_bready  ),
-
-    .axiOut_rvalid  ( cpu_sync_rvalid  ),
-    .axiOut_rdata   ( cpu_sync_rdata   ),
-    .axiOut_rid     ( {1'b0, cpu_sync_rid} ),
-    .axiOut_rresp   ( cpu_sync_rresp   ),
-    .axiOut_rlast   ( cpu_sync_rlast   ),
-    .axiOut_rready  ( cpu_sync_rready  ),
-
-    .axiOut_awvalid ( cpu_sync_awvalid ),
-    .axiOut_awaddr  ( cpu_sync_awaddr  ),
+    .axiIn_awready  ( cpu_awready                      ),
+    .axiIn_wready   ( cpu_wready                       ),
+    .axiIn_bvalid   ( cpu_bvalid                       ),
+    .axiIn_bid      ( {cpu_bid_4, cpu_bid}             ),
+    .axiIn_bresp    ( cpu_bresp                        ),
+    .axiIn_arready  ( cpu_arready                      ),
+    .axiIn_rvalid   ( cpu_rvalid                       ),
+    .axiIn_rdata    ( cpu_rdata                        ),
+    .axiIn_rid      ( {cpu_rid_4, cpu_rid}             ),
+    .axiIn_rresp    ( cpu_rresp                        ),
+    .axiIn_rlast    ( cpu_rlast                        ),
+    .axiOut_awvalid ( cpu_sync_awvalid                 ),
+    .axiOut_awaddr  ( cpu_sync_awaddr                  ),
     .axiOut_awid    ( {cpu_sync_awid_4, cpu_sync_awid} ),
-    .axiOut_awlen   ( cpu_sync_awlen   ),
-    .axiOut_awsize  ( cpu_sync_awsize  ),
-    .axiOut_awburst ( cpu_sync_awburst ),
-    .axiOut_awlock  ( cpu_sync_awlock  ),
-    .axiOut_awcache ( cpu_sync_awcache ),
-    .axiOut_awprot  ( cpu_sync_awprot  ),
 
-    .axiOut_wvalid  ( cpu_sync_wvalid  ),
-    .axiOut_wdata   ( cpu_sync_wdata   ),
-    .axiOut_wstrb   ( cpu_sync_wstrb   ),
-    .axiOut_wlast   ( cpu_sync_wlast   ),
-
-    .axiOut_arvalid ( cpu_sync_arvalid ),
-    .axiOut_araddr  ( cpu_sync_araddr  ),
+    .axiOut_awlen   ( cpu_sync_awlen                   ),
+    .axiOut_awsize  ( cpu_sync_awsize                  ),
+    .axiOut_awburst ( cpu_sync_awburst                 ),
+    .axiOut_awlock  ( cpu_sync_awlock                  ),
+    .axiOut_awcache ( cpu_sync_awcache                 ),
+    .axiOut_awprot  ( cpu_sync_awprot                  ),
+    .axiOut_wvalid  ( cpu_sync_wvalid                  ),
+    .axiOut_wdata   ( cpu_sync_wdata                   ),
+    .axiOut_wstrb   ( cpu_sync_wstrb                   ),
+    .axiOut_wlast   ( cpu_sync_wlast                   ),
+    .axiOut_bready  ( cpu_sync_bready                  ),
+    .axiOut_arvalid ( cpu_sync_arvalid                 ),
+    .axiOut_araddr  ( cpu_sync_araddr                  ),
     .axiOut_arid    ( {cpu_sync_arid_4, cpu_sync_arid} ),
-    .axiOut_arlen   ( cpu_sync_arlen   ),
-    .axiOut_arsize  ( cpu_sync_arsize  ),
-    .axiOut_arburst ( cpu_sync_arburst ),
-    .axiOut_arlock  ( cpu_sync_arlock  ),
-    .axiOut_arcache ( cpu_sync_arcache ),
-    .axiOut_arprot  ( cpu_sync_arprot  ),
-    .axiOut_arready ( cpu_sync_arready )
+
+    .axiOut_arlen   ( cpu_sync_arlen                   ),
+    .axiOut_arsize  ( cpu_sync_arsize                  ),
+    .axiOut_arburst ( cpu_sync_arburst                 ),
+    .axiOut_arlock  ( cpu_sync_arlock                  ),
+    .axiOut_arcache ( cpu_sync_arcache                 ),
+    .axiOut_arprot  ( cpu_sync_arprot                  ),
+    .axiOut_rready  ( cpu_sync_rready                  )
 );
 
 // axi ram
-axi_wrap_ram_sp_ext u_axi_ram (
+axi_wrap_ram_sp_external u_axi_ram (
     .aclk           (sys_clk        ),
     .aresetn        (sys_resetn     ),
 
@@ -1318,7 +1324,7 @@ axi_uart_controller u_axi_uart_controller (
     .axi_s_awprot   (uart_awprot    ),
     .axi_s_awvalid  (uart_awvalid   ),
     .axi_s_awready  (uart_awready   ),
-    .axi_s_wid      (uart_wid       ),
+    .axi_s_wid      (uart_awid      ), // w_id is same as aw_id
     .axi_s_wdata    (uart_wdata     ),
     .axi_s_wstrb    (uart_wstrb     ),
     .axi_s_wlast    (uart_wlast     ),
@@ -1351,10 +1357,10 @@ axi_uart_controller u_axi_uart_controller (
     .apb_addr_dma   (20'b0          ),
     .apb_valid_dma  (1'b0           ),
     .apb_wdata_dma  (32'b0          ),
-    .apb_rdata_dma  (               ),  // Output, left unconnected
-    .apb_ready_dma  (               ),  // Output, left unconnected
-    .dma_grant      (               ),  // Output, left unconnected
-    .dma_req_o      (               ),  // Output, left unconnected
+    .apb_rdata_dma  (               ),
+    .apb_ready_dma  (               ),
+    .dma_grant      (               ),
+    .dma_req_o      (               ),
     .dma_ack_i      (1'b0           ),
 
     // UART0
@@ -1372,5 +1378,128 @@ axi_uart_controller u_axi_uart_controller (
     .uart0_ri_i     (uart0_ri_i     ),
     .uart0_int      (uart0_int      )
 );
+
+axi_dvi u_axi_dvi (
+    .s_awvalid  ( dvi_awvalid   ),
+    .s_awaddr   ( dvi_awaddr    ),
+    .s_awid     ( dvi_awid      ),
+    .s_awlen    ( dvi_awlen     ),
+    .s_awsize   ( dvi_awsize    ),
+    .s_awburst  ( dvi_awburst   ),
+    .s_awlock   ( dvi_awlock    ),
+    .s_awcache  ( dvi_awcache   ),
+    .s_awprot   ( dvi_awprot    ),
+    .s_wvalid   ( dvi_wvalid    ),
+    .s_wdata    ( dvi_wdata     ),
+    .s_wstrb    ( dvi_wstrb     ),
+    .s_wlast    ( dvi_wlast     ),
+    .s_bready   ( dvi_bready    ),
+    .s_arvalid  ( dvi_arvalid   ),
+    .s_araddr   ( dvi_araddr    ),
+    .s_arid     ( dvi_arid      ),
+    .s_arlen    ( dvi_arlen     ),
+    .s_arsize   ( dvi_arsize    ),
+    .s_arburst  ( dvi_arburst   ),
+    .s_arlock   ( dvi_arlock    ),
+    .s_arcache  ( dvi_arcache   ),
+    .s_arprot   ( dvi_arprot    ),
+    .s_rready   ( dvi_rready    ),
+    
+    .aclk       ( sys_clk       ),
+    .aresetn    ( sys_resetn    ),
+    
+    .s_awready  ( dvi_awready   ),
+    .s_wready   ( dvi_wready    ),
+    .s_bvalid   ( dvi_bvalid    ),
+    .s_bid      ( dvi_bid       ),
+    .s_bresp    ( dvi_bresp     ),
+    .s_arready  ( dvi_arready   ),
+    .s_rvalid   ( dvi_rvalid    ),
+    .s_rdata    ( dvi_rdata     ),
+    .s_rid      ( dvi_rid       ),
+    .s_rresp    ( dvi_rresp     ),
+    .s_rlast    ( dvi_rlast     ),
+    
+    .video_clk  ( video_clk     ),
+    .hsync      ( video_hsync   ),
+    .vsync      ( video_vsync   ),
+    .data_enable( video_de      ),
+    .video_red  ( video_red     ),
+    .video_green( video_green   ),
+    .video_blue ( video_blue    )
+);
+
+confreg #(
+    .SIMULATION(SIMULATION)
+) u_confreg (
+    .aclk           ( sys_clk         ),
+    .aresetn        ( sys_resetn      ),
+    .cpu_clk        ( cpu_clk         ),
+    .cpu_resetn     ( cpu_resetn      ),
+
+    .s_awid         ( confreg_awid    ),
+    .s_awaddr       ( confreg_awaddr  ),
+    .s_awlen        ( confreg_awlen   ),
+    .s_awsize       ( confreg_awsize  ),
+    .s_awburst      ( confreg_awburst ),
+    .s_awlock       ( confreg_awlock  ),
+    .s_awcache      ( confreg_awcache ),
+    .s_awprot       ( confreg_awprot  ),
+    .s_awvalid      ( confreg_awvalid ),
+    .s_awready      ( confreg_awready ),
+    .s_wid          ( confreg_awid    ),
+    .s_wdata        ( confreg_wdata   ),
+    .s_wstrb        ( confreg_wstrb   ),
+    .s_wlast        ( confreg_wlast   ),
+    .s_wvalid       ( confreg_wvalid  ),
+    .s_wready       ( confreg_wready  ),
+    .s_bid          ( confreg_bid     ),
+    .s_bresp        ( confreg_bresp   ),
+    .s_bvalid       ( confreg_bvalid  ),
+    .s_bready       ( confreg_bready  ),
+    .s_arid         ( confreg_arid    ),
+    .s_araddr       ( confreg_araddr  ),
+    .s_arlen        ( confreg_arlen   ),
+    .s_arsize       ( confreg_arsize  ),
+    .s_arburst      ( confreg_arburst ),
+    .s_arlock       ( confreg_arlock  ),
+    .s_arcache      ( confreg_arcache ),
+    .s_arprot       ( confreg_arprot  ),
+    .s_arvalid      ( confreg_arvalid ),
+    .s_arready      ( confreg_arready ),
+    .s_rid          ( confreg_rid     ),
+    .s_rdata        ( confreg_rdata   ),
+    .s_rresp        ( confreg_rresp   ),
+    .s_rlast        ( confreg_rlast   ),
+    .s_rvalid       ( confreg_rvalid  ),
+    .s_rready       ( confreg_rready  ),
+
+    .led            ( leds            ),
+    .dpy0           ( dpy0            ),
+    .dpy1           ( dpy1            ),
+    .switch         ( dip_sw          ),
+    .touch_btn      ( touch_btn       ),
+    .dma_finish     ( 1'b0            ),
+    .fft_finish     ( 1'b0            ),
+    .confreg_int    ( confreg_int     )
+);
+
+// 中断处理：合并外部中断（confreg_int）和 UART 中断
+// 中断寄存器在 confreg 内部实现，通过 AXI 接口读写
+wire [7:0] cpu_intrpt_pre;
+assign cpu_intrpt_pre[0] = uart0_int | confreg_int;  // HWI0 = UART + 外部中断
+assign cpu_intrpt_pre[7:1] = 7'b0;
+
+// 异步信号处理（延迟打拍）- 消除亚稳态
+reg [7:0] cpu_intrpt_sync1, cpu_intrpt_sync2;
+always @(posedge cpu_clk or negedge cpu_resetn) begin
+    if (!cpu_resetn) begin
+        cpu_intrpt_sync1 <= 8'b0;
+        cpu_intrpt_sync2 <= 8'b0;
+    end else begin
+        cpu_intrpt_sync1 <= cpu_intrpt_pre;
+        cpu_intrpt_sync2 <= cpu_intrpt_sync1;
+    end
+end
 
 endmodule
