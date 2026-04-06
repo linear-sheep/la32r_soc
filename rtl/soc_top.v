@@ -1163,7 +1163,7 @@ core_top u_cpu(
     .debug0_wb_inst     (debug_wb_inst     ),
     .debug0_wb_rf_wen   (debug_wb_rf_wen   ),
     .debug0_wb_rf_wnum  (debug_wb_rf_wnum  ),
-    .debug_wb_rf_wdata  (debug_wb_rf_wdata )
+    .debug0_wb_rf_wdata  (debug_wb_rf_wdata )
 );
 
 // clock sync: from CPU to AXI_Crossbar
