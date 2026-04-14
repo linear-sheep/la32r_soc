@@ -22,4 +22,8 @@
 /sdk/toolchains/*
 # 但保留 toolchains 目录下的 .sh 和 .md 文件
 !/sdk/toolchains/*.sh
+<<<<<<< HEAD
 !/sdk/toolchains/*.md
+=======
+!/sdk/toolchains/*.md
+>>>>>>> 24239978e32911e879e9238771ec3dc3ffe7820d

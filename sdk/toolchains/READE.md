@@ -30,4 +30,3 @@ Makefile默认使用picolib，若使用newlib，首先将`examples/*/Makefile`�
 `-lgloss`
  
 完成修改，此时调用的是newlib库
-
