@@ -34,6 +34,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //1f10_0000 dvi
 //1f20_0000 confreg
 //1f30_0000 dma
+//1c40_0000 framebuffer
 
 `include "config.h"
 
@@ -377,13 +378,13 @@ assign dma_m_awburst    = 2'b0;
 assign dma_m_awlock     = 1'b0;
 assign dma_m_awcache    = 4'b0;
 assign dma_m_awprot     = 3'b0;
-assign dma_m_awvalid    = 1'b1;
+assign dma_m_awvalid    = 1'b0; // fixed
 assign dma_m_wid        = 4'b0;
 assign dma_m_wdata      = 32'b0;
 assign dma_m_wstrb      = 4'b0;
 assign dma_m_wlast      = 1'b0;
 assign dma_m_wvalid     = 1'b0;
-assign dma_m_bready     = 1'b1;
+assign dma_m_bready     = 1'b0; // fixed
 
 wire [4 :0] dma_s_arid   ;
 wire [31:0] dma_s_araddr ;
@@ -461,7 +462,6 @@ wire [3 :0] axiOut_1_awcache;
 wire [2 :0] axiOut_1_awprot ;
 wire        axiOut_1_awvalid;
 wire        axiOut_1_awready;
-wire [4 :0] axiOut_1_wid    ;
 wire [31:0] axiOut_1_wdata  ;
 wire [3 :0] axiOut_1_wstrb  ;
 wire        axiOut_1_wlast  ;
@@ -484,6 +484,46 @@ assign axiOut_1_bid    = 5'b0;
 assign axiOut_1_bresp = 2'b0;
 assign axiOut_1_bvalid = 1'b0;
 
+// fb interface
+wire [31:0] fb_base;
+wire        fb_en;
+wire        fb_valid;
+wire [31:0] fb_pixel;
+
+// dvi vdma 跟 dma 共享读总线，优先级高于 dma
+wire [3 :0] dvi_m_arid;
+wire [31:0] dvi_m_araddr;
+wire [7 :0] dvi_m_arlen;
+wire [2 :0] dvi_m_arsize;
+wire [1 :0] dvi_m_arburst;
+wire        dvi_m_arlock;
+wire [3 :0] dvi_m_arcache;
+wire [2 :0] dvi_m_arprot;
+wire        dvi_m_arvalid;
+wire        dvi_m_arready;
+wire [3 :0] dvi_m_rid;
+wire [31:0] dvi_m_rdata;
+wire [1 :0] dvi_m_rresp;
+wire        dvi_m_rlast;
+wire        dvi_m_rvalid;
+wire        dvi_m_rready;
+
+wire [3 :0] mux_m_arid;
+wire [31:0] mux_m_araddr;
+wire [7 :0] mux_m_arlen;
+wire [2 :0] mux_m_arsize;
+wire [1 :0] mux_m_arburst;
+wire        mux_m_arlock;
+wire [3 :0] mux_m_arcache;
+wire [2 :0] mux_m_arprot;
+wire        mux_m_arvalid;
+wire        mux_m_arready;
+wire [3 :0] mux_m_rid;
+wire [31:0] mux_m_rdata;
+wire [1 :0] mux_m_rresp;
+wire        mux_m_rlast;
+wire        mux_m_rvalid;
+wire        mux_m_rready;
 
 //axi dvi
 wire [4 :0] dvi_arid   ;
@@ -522,18 +562,6 @@ wire [4 :0] dvi_bid    ;
 wire [1 :0] dvi_bresp  ;
 wire        dvi_bvalid ;
 wire        dvi_bready ;
-
-// assign dvi_arready  = 1'b1;
-// assign dvi_rid      = 5'b0;
-// assign dvi_rdata    = 32'b0;
-// assign dvi_rresp    = 2'b0;
-// assign dvi_rlast    = 1'b0;
-// assign dvi_rvalid   = 1'b0;
-// assign dvi_awready  = 1'b1;
-// assign dvi_wready   = 1'b1;
-// assign dvi_bid      = 5'b0;
-// assign dvi_bresp    = 2'b0;
-// assign dvi_bvalid   = 1'b0;
 
 //axi confreg
 wire [4 :0] confreg_arid   ;
@@ -746,23 +774,23 @@ AxiCrossbar_2x8  u_AxiCrossbar_2x8 (
     .axiIn_1_bid             ( dma_m_bid           ),
     .axiIn_1_bresp           ( dma_m_bresp         ),
     //ar
-    .axiIn_1_arvalid         ( dma_m_arvalid       ),
-    .axiIn_1_arready         ( dma_m_arready       ),
-    .axiIn_1_araddr          ( dma_m_araddr        ),
-    .axiIn_1_arid            ( dma_m_arid          ),
-    .axiIn_1_arlen           ( dma_m_arlen         ),
-    .axiIn_1_arsize          ( dma_m_arsize        ),
-    .axiIn_1_arburst         ( dma_m_arburst       ),
-    .axiIn_1_arlock          ( dma_m_arlock        ),
-    .axiIn_1_arcache         ( dma_m_arcache       ),
-    .axiIn_1_arprot          ( dma_m_arprot        ),
+    .axiIn_1_arvalid         ( mux_m_arvalid       ),
+    .axiIn_1_arready         ( mux_m_arready       ),
+    .axiIn_1_araddr          ( mux_m_araddr        ),
+    .axiIn_1_arid            ( mux_m_arid          ),
+    .axiIn_1_arlen           ( mux_m_arlen         ),
+    .axiIn_1_arsize          ( mux_m_arsize        ),
+    .axiIn_1_arburst         ( mux_m_arburst       ),
+    .axiIn_1_arlock          ( mux_m_arlock        ),
+    .axiIn_1_arcache         ( mux_m_arcache       ),
+    .axiIn_1_arprot          ( mux_m_arprot        ),
     //r
-    .axiIn_1_rvalid          ( dma_m_rvalid        ),
-    .axiIn_1_rready          ( dma_m_rready        ),
-    .axiIn_1_rdata           ( dma_m_rdata         ),
-    .axiIn_1_rid             ( dma_m_rid           ),
-    .axiIn_1_rresp           ( dma_m_rresp         ),
-    .axiIn_1_rlast           ( dma_m_rlast         ),
+    .axiIn_1_rvalid          ( mux_m_rvalid        ),
+    .axiIn_1_rready          ( mux_m_rready        ),
+    .axiIn_1_rdata           ( mux_m_rdata         ),
+    .axiIn_1_rid             ( mux_m_rid           ),
+    .axiIn_1_rresp           ( mux_m_rresp         ),
+    .axiIn_1_rlast           ( mux_m_rlast         ),
 
     //slave 0
     //aw
@@ -1379,6 +1407,95 @@ axi_uart_controller u_axi_uart_controller (
     .uart0_int      (uart0_int      )
 );
 
+// --- axi_read_mux for AR/R channel sharing between DMA and DVI VDMA ---
+axi_read_mux_2to1 u_axi_read_mux (
+    .aclk       ( sys_clk     ),
+    .aresetn    ( sys_resetn  ),
+    // S0 = User DMA (m)
+    .s0_arid    ( dma_m_arid    ),
+    .s0_araddr  ( dma_m_araddr  ),
+    .s0_arlen   ( dma_m_arlen   ),
+    .s0_arsize  ( dma_m_arsize  ),
+    .s0_arburst ( dma_m_arburst ),
+    .s0_arlock  ( dma_m_arlock  ),
+    .s0_arcache ( dma_m_arcache ),
+    .s0_arprot  ( dma_m_arprot  ),
+    .s0_arvalid ( dma_m_arvalid ),
+    .s0_arready ( dma_m_arready ),
+    .s0_rid     ( dma_m_rid     ),
+    .s0_rdata   ( dma_m_rdata   ),
+    .s0_rresp   ( dma_m_rresp   ),
+    .s0_rlast   ( dma_m_rlast   ),
+    .s0_rvalid  ( dma_m_rvalid  ),
+    .s0_rready  ( dma_m_rready  ),
+    // S1 = DVI ExtFB Reader
+    .s1_arid    ( dvi_m_arid    ),
+    .s1_araddr  ( dvi_m_araddr  ),
+    .s1_arlen   ( dvi_m_arlen   ),
+    .s1_arsize  ( dvi_m_arsize  ),
+    .s1_arburst ( dvi_m_arburst ),
+    .s1_arlock  ( dvi_m_arlock  ),
+    .s1_arcache ( dvi_m_arcache ),
+    .s1_arprot  ( dvi_m_arprot  ),
+    .s1_arvalid ( dvi_m_arvalid ),
+    .s1_arready ( dvi_m_arready ),
+    .s1_rid     ( dvi_m_rid     ),
+    .s1_rdata   ( dvi_m_rdata   ),
+    .s1_rresp   ( dvi_m_rresp   ),
+    .s1_rlast   ( dvi_m_rlast   ),
+    .s1_rvalid  ( dvi_m_rvalid  ),
+    .s1_rready  ( dvi_m_rready  ),
+    // M = Master Out to Crossbar
+    .m_arid     ( mux_m_arid    ),
+    .m_araddr   ( mux_m_araddr  ),
+    .m_arlen    ( mux_m_arlen   ),
+    .m_arsize   ( mux_m_arsize  ),
+    .m_arburst  ( mux_m_arburst ),
+    .m_arlock   ( mux_m_arlock  ),
+    .m_arcache  ( mux_m_arcache ),
+    .m_arprot   ( mux_m_arprot  ),
+    .m_arvalid  ( mux_m_arvalid ),
+    .m_arready  ( mux_m_arready ),
+    .m_rid      ( mux_m_rid     ),
+    .m_rdata    ( mux_m_rdata   ),
+    .m_rresp    ( mux_m_rresp   ),
+    .m_rlast    ( mux_m_rlast   ),
+    .m_rvalid   ( mux_m_rvalid  ),
+    .m_rready   ( mux_m_rready  )
+);
+
+// --- DVI ExtFB Reader (VDMA) ---
+dvi_extfb_reader u_dvi_extfb_reader (
+    .aclk       ( sys_clk     ),
+    .aresetn    ( sys_resetn  ),
+    // AXI AR channel
+    .m_arid     ( dvi_m_arid    ),
+    .m_araddr   ( dvi_m_araddr  ),
+    .m_arlen    ( dvi_m_arlen   ),
+    .m_arsize   ( dvi_m_arsize  ),
+    .m_arburst  ( dvi_m_arburst ),
+    .m_arlock   ( dvi_m_arlock  ),
+    .m_arcache  ( dvi_m_arcache ),
+    .m_arprot   ( dvi_m_arprot  ),
+    .m_arvalid  ( dvi_m_arvalid ),
+    .m_arready  ( dvi_m_arready ),
+    // AXI R channel
+    .m_rid      ( dvi_m_rid     ),
+    .m_rdata    ( dvi_m_rdata   ),
+    .m_rresp    ( dvi_m_rresp   ),
+    .m_rlast    ( dvi_m_rlast   ),
+    .m_rvalid   ( dvi_m_rvalid  ),
+    .m_rready   ( dvi_m_rready  ),
+    // FB interface
+    .fb_base    ( fb_base        ),
+    .fb_en      ( fb_en          ),
+    .fb_valid   ( fb_valid       ),
+    .fb_pixel   ( fb_pixel       ),
+    .video_clk  ( video_clk      ),     // 补充：视频像素时钟
+    .frame_start( video_vsync    ),     // 补充：场同步(新一帧开始，重置地址)
+    .line_start ( video_hsync    )      // 补充：行同步(新一行开始，触发读取)
+);
+
 axi_dvi u_axi_dvi (
     .s_awvalid  ( dvi_awvalid   ),
     .s_awaddr   ( dvi_awaddr    ),
@@ -1420,6 +1537,11 @@ axi_dvi u_axi_dvi (
     .s_rresp    ( dvi_rresp     ),
     .s_rlast    ( dvi_rlast     ),
     
+    .fb_base    ( fb_base        ),
+    .fb_en      ( fb_en          ),
+    .fb_valid   ( fb_valid       ),
+    .fb_pixel   ( fb_pixel       ),
+
     .video_clk  ( video_clk     ),
     .hsync      ( video_hsync   ),
     .vsync      ( video_vsync   ),

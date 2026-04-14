@@ -1,5 +1,25 @@
-/sdk/
-/test/
+# ======= 根目录及 FPGA 测试 =======
 /fpga/*
 !/fpga/constraints/
 !/fpga/create_project.tcl
+
+# ======= SDK 规则 =======
+# 1. 忽略编译过程产生的 obj 文件夹和转换工具
+/sdk/**/obj/
+/sdk/**/convert
+
+# 2. 忽略所有生成的二进制及反汇编产物
+/sdk/**/*.o
+/sdk/**/*.s
+/sdk/**/*.elf
+/sdk/**/*.bin
+/sdk/**/*.mif
+/sdk/**/*.coe
+/sdk/**/*.vlog
+
+# 3. 对 toolchains 目录进行特殊处理
+# 屏蔽 toolchains 目录下的所有内容
+/sdk/toolchains/*
+# 但保留 toolchains 目录下的 .sh 和 .md 文件
+!/sdk/toolchains/*.sh
+!/sdk/toolchains/*.md

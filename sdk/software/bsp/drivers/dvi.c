@@ -25,3 +25,13 @@ void DVI_Draw_SQU(uint32_t x, uint32_t y, uint32_t r)
     RegWrite(DVI_SQU_DIR, coordinates);
     RegWrite(DVI_SQU_R, size);
 }
+
+void DVI_SetVramBase(uint32_t base_addr)
+{
+    RegWrite(DVI_VRAM_BASE_ADDR, base_addr);
+}
+
+void DVI_EnableVram(uint32_t en)
+{
+    RegWrite(DVI_VRAM_CTRL, (en & 0x1));
+}
