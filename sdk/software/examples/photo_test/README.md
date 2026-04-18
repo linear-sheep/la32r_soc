@@ -19,17 +19,38 @@ make
 编译完成后，生成的目标文件存放在 `obj/` 目录下（通常为可以下载的二进制文件），可通过下载工具烧录或者串口传送到板子上运行。
 
 ## 如何引入其他图片
-`photo_test` 使用了 `convert.py` 这个 Python 脚本将普通图片转换为 C 语言的数组格式并保存在 `image.h` 中。如果想更换显示的图片，请按照以下步骤操作：
+`photo_test` 使用 `convert.py` 将普通图片转换为 C 数组并写入 `image.h`，支持命令行参数。
 
-1. 准备一张你喜欢的图片（例如 `my_pic.jpg` 或 `my_pic.png`），将它放到当前 `photo_test` 目录下。
-2. 打开 `convert.py`，定位到文件最末尾的这行代码：
-   ```python
-   convert_image(os.path.join(script_dir, 'test.png'), os.path.join(script_dir, 'image.h'))
-   ```
-   **将其中的 `'test.png'` 替换为你准备的图片名称**（例如 `'my_pic.jpg'`）。
-3. 运行该 Python 脚本生成新的 `image.h` 头文件：
+1. 将图片放到当前 `photo_test` 目录，或准备好其绝对/相对路径（支持 `.png/.jpg/.jpeg`）。
+2. 生成 `image.h`（推荐显式指定输入）：
    ```bash
-   python convert.py
+   python3 convert.py -i my_pic.jpg
    ```
-   *(注意：该脚本依赖于 Pillow 库，如果没有可通过 `pip install Pillow` 安装。若在新版本 Pillow 遇到 `Image.ANTIALIAS` 报错，请将其修改为 `Image.Resampling.LANCZOS`)*
-4. 重新执行 `make` 编译工程即可生效。
+3. 如需指定输出文件名或分辨率：
+   ```bash
+   python3 convert.py -i my_pic.jpg -o image.h --width 400 --height 300
+   ```
+4. 重新执行编译：
+   ```bash
+   make
+   ```
+
+补充说明：
+- 不带 `-i` 时，脚本会自动查找输入图：优先 `test.png`、`test.jpg`、`test.jpeg`，否则选择目录下第一个支持格式的图片。
+- 查看帮助：
+  ```bash
+  python3 convert.py -h
+  ```
+
+## 画面发糊的常见原因
+显示效果“发糊”通常由以下因素叠加导致：
+
+1. 颜色深度限制：当前是 RGB332（8 位色），总颜色只有 256 色，容易出现色带和细节损失。
+2. 分辨率压缩：图片会被缩放到 `convert.py` 的目标尺寸（默认 400x300），细节会先损失一次。
+3. 源图有损压缩：如果输入本身是 JPG，再量化到 RGB332 后失真会更明显。
+
+可行优化：
+
+1. 尽量使用更高目标分辨率（并同步修改 `main.c` 中的 `IMG_W/IMG_H`）。
+2. 尽量使用高质量源图（优先 PNG）。
+3. 若硬件条件允许，后续可升级到 RGB565（16 位色）以显著提升观感。
