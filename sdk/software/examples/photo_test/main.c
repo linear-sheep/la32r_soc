@@ -66,11 +66,13 @@ static void photo_test(void)
     
     // 启动硬件计算
     SOBEL_CTRL     = 1;
+    printf("[DEBUG] DMA Start. Waiting for completion...\n");
     
     // 轮询等待硬件计算完成 (假设硬件在算完后将位 0 置 1)
     while ((SOBEL_CTRL & 1) == 0) {
         // do nothing
     }
+    printf("[DEBUG] DMA Finish.\n");
 
     // 3. 将 DVI 显存基址指向处理完毕的目标地址
     DVI_Draw_Rect(0, 0, 0, 0);
