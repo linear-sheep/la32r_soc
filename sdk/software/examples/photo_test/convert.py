@@ -37,4 +37,4 @@ def convert_image(input_path, output_path, width=400, height=300):
 
 if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    convert_image(os.path.join(script_dir, 'test.png'), os.path.join(script_dir, '../../bsp/include/image.h'))
+    convert_image(os.path.join(script_dir, 'test.png'), os.path.join(script_dir, 'image.h'))
