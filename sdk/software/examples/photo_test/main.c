@@ -42,11 +42,15 @@ static void photo_test(void)
     int x_off = (WIDTH - IMG_W) / 2;
     int y_off = (HEIGHT - IMG_H) / 2;
 
+    printf("[DEBUG] Clearing background...\n");
+
     // 清零目标和源背景
     for (int i = 0; i < FRAME_BYTES; i++) {
         fb_dst[i] = 0;
         fb_src[i] = 0;
     }
+
+    printf("[DEBUG] Copying image to VRAM...\n");
 
     // 1. 将原图布置到 VRAM 源地址处 (居中)
     for (int y = 0; y < IMG_H; y++) {
@@ -58,6 +62,9 @@ static void photo_test(void)
             }
         }
     }
+
+    printf("[DEBUG] Configuring DMA...\n");
+    __asm__ volatile("sync" ::: "memory"); // 强制刷新 CPU 缓存/写缓冲
 
     // 2. 配置 Sobel 硬件 DMA 算子进行处理
     SOBEL_SRC_ADDR = VRAM0_PHYS + FRAME_BYTES;
