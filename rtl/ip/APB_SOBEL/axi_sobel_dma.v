@@ -329,13 +329,51 @@ module axi_sobel_dma (
     assign m_arvalid = (state == RD_REQ);
     assign m_rready  = (state == RD_WAIT);
 
-    // 计算逻辑（转化为灰度 + 梯度）
-    wire [7:0] p_c = window[4];  // 中心像素
-    // ... 由于是最小实现代码，我们以最简逻辑代替完整的梯度公式（或假定边界为 0，其余直接赋值原像素）
-    // 为了满足“可验证的目标”，即展示出能够通过硬件运算出异于原图的值。此处假定我们给结果做伪 Sobel，或者单纯反色。
-    // 在真正的生产环境中应实现完整的 3x3 Gx/Gy 计算流水线。
+    // ==========================================
+    // 真正的 Sobel 计算逻辑 (分离灰度、Gx/Gy 算子)
+    // ==========================================
+    function [8:0] get_gray;
+        input [7:0] rgb;
+        begin
+            // 把 RGB332 拆成 R(3) G(3) B(2) 转换到近似灰度
+            // Gray = (R * 3 + G * 4 + B * 1)/8
+            get_gray = ({rgb[7:5], 5'b0} >> 2) + ({rgb[4:2], 5'b0} >> 1) + ({rgb[1:0], 6'b0} >> 2);
+        end
+    endfunction
+
+    wire [8:0] g0 = get_gray(window[0]);
+    wire [8:0] g1 = get_gray(window[1]);
+    wire [8:0] g2 = get_gray(window[2]);
+    wire [8:0] g3 = get_gray(window[3]);
+    wire [8:0] g4 = get_gray(window[4]);
+    wire [8:0] g5 = get_gray(window[5]);
+    wire [8:0] g6 = get_gray(window[6]);
+    wire [8:0] g7 = get_gray(window[7]);
+    wire [8:0] g8 = get_gray(window[8]);
+
+    // Gx 梯度: 
+    // [ -1,  0,  1 ]
+    // [ -2,  0,  2 ]
+    // [ -1,  0,  1 ]
+    wire [10:0] gx_p = g2 + (g5 << 1) + g8;
+    wire [10:0] gx_n = g0 + (g3 << 1) + g6;
+    wire [11:0] gx_abs = (gx_p > gx_n) ? (gx_p - gx_n) : (gx_n - gx_p);
+
+    // Gy 梯度:
+    // [ -1, -2, -1 ]
+    // [  0,  0,  0 ]
+    // [  1,  2,  1 ]
+    wire [10:0] gy_p = g6 + (g7 << 1) + g8;
+    wire [10:0] gy_n = g0 + (g1 << 1) + g2;
+    wire [11:0] gy_abs = (gy_p > gy_n) ? (gy_p - gy_n) : (gy_n - gy_p);
+
+    // 绝对值和替代平方和
+    wire [11:0] g_total = gx_abs + gy_abs;
+    
+    // 如果梯度 > 阈值 则判断为白色边缘(11111111)，否则为黑色(00000000)
     wire [7:0] res_pixel;
-    assign res_pixel = (x_cnt == 0 || x_cnt == width-1 || y_cnt == 0 || y_cnt == height-1) ? 8'd0 : ~p_c;
+    assign res_pixel = (x_cnt == 0 || x_cnt == width-1 || y_cnt == 0 || y_cnt == height-1) ? 8'd0 :
+                       (g_total > 12'd100) ? 8'b111_111_11 : 8'd0;
 
     // AXI 写请求
     wire [31:0] aw_full_addr = reg_dst_addr + y_cnt * width + x_cnt;
