@@ -360,31 +360,7 @@ wire [1 :0] dma_m_bresp  ;
 wire        dma_m_bvalid ;
 wire        dma_m_bready ;
 
-assign dma_m_arid       = 4'b0  ;
-assign dma_m_araddr     = 32'h0;
-assign dma_m_arlen      = 8'b0  ;
-assign dma_m_arsize     = 3'b0 ;
-assign dma_m_arburst    = 2'b0;
-assign dma_m_arlock     = 1'b0;
-assign dma_m_arcache    = 4'b0;
-assign dma_m_arprot     = 3'b0;
-assign dma_m_arvalid    = 1'b0;
-assign dma_m_rready     = 1'b1;
-assign dma_m_awid       = 4'b0;
-assign dma_m_awaddr     = 32'b0;
-assign dma_m_awlen      = 8'b0;
-assign dma_m_awsize     = 3'b0;
-assign dma_m_awburst    = 2'b0;
-assign dma_m_awlock     = 1'b0;
-assign dma_m_awcache    = 4'b0;
-assign dma_m_awprot     = 3'b0;
-assign dma_m_awvalid    = 1'b0; // fixed
-assign dma_m_wid        = 4'b0;
-assign dma_m_wdata      = 32'b0;
-assign dma_m_wstrb      = 4'b0;
-assign dma_m_wlast      = 1'b0;
-assign dma_m_wvalid     = 1'b0;
-assign dma_m_bready     = 1'b0; // fixed
+// dma_m and dma_s now driven by axi_sobel_dma
 
 wire [4 :0] dma_s_arid   ;
 wire [31:0] dma_s_araddr ;
@@ -423,17 +399,84 @@ wire        dma_s_bvalid ;
 wire        dma_s_bready ;
 wire        dma_finish   ;
 
-assign dma_s_arready    = 1'b1;
-assign dma_s_rid        = 5'b0;
-assign dma_s_rdata      = 32'b0;
-assign dma_s_rresp      = 2'b0;
-assign dma_s_rlast      = 1'b0;
-assign dma_s_rvalid     = 1'b0;
-assign dma_s_awready    = 1'b1;
-assign dma_s_wready     = 1'b1;
-assign dma_s_bid        = 5'b0;
-assign dma_s_bresp      = 2'b0;
-assign dma_s_bvalid     = 1'b0;
+    axi_sobel_dma u_sobel_dma (
+        .aclk(sys_clk),
+        .aresetn(sys_resetn),
+        // Slave Interface
+        .s_awid(dma_s_awid[3:0]),
+        .s_awaddr(dma_s_awaddr),
+        .s_awlen(dma_s_awlen),
+        .s_awsize(dma_s_awsize),
+        .s_awburst(dma_s_awburst),
+        .s_awlock({1'b0, dma_s_awlock}),
+        .s_awcache(dma_s_awcache),
+        .s_awprot(dma_s_awprot),
+        .s_awvalid(dma_s_awvalid),
+        .s_awready(dma_s_awready),
+        .s_wid(dma_s_awid[3:0]),
+        .s_wdata(dma_s_wdata),
+        .s_wstrb(dma_s_wstrb),
+        .s_wlast(dma_s_wlast),
+        .s_wvalid(dma_s_wvalid),
+        .s_wready(dma_s_wready),
+        .s_bid(dma_s_bid[3:0]),
+        .s_bresp(dma_s_bresp),
+        .s_bvalid(dma_s_bvalid),
+        .s_bready(dma_s_bready),
+        .s_arid(dma_s_arid[3:0]),
+        .s_araddr(dma_s_araddr),
+        .s_arlen(dma_s_arlen),
+        .s_arsize(dma_s_arsize),
+        .s_arburst(dma_s_arburst),
+        .s_arlock({1'b0, dma_s_arlock}),
+        .s_arcache(dma_s_arcache),
+        .s_arprot(dma_s_arprot),
+        .s_arvalid(dma_s_arvalid),
+        .s_arready(dma_s_arready),
+        .s_rid(dma_s_rid[3:0]),
+        .s_rdata(dma_s_rdata),
+        .s_rresp(dma_s_rresp),
+        .s_rlast(dma_s_rlast),
+        .s_rvalid(dma_s_rvalid),
+        .s_rready(dma_s_rready),
+        // Master Interface
+        .m_arid(dma_m_arid),
+        .m_araddr(dma_m_araddr),
+        .m_arlen(dma_m_arlen),
+        .m_arsize(dma_m_arsize),
+        .m_arburst(dma_m_arburst),
+        .m_arlock(dma_m_arlock),
+        .m_arcache(dma_m_arcache),
+        .m_arprot(dma_m_arprot),
+        .m_arvalid(dma_m_arvalid),
+        .m_arready(dma_m_arready),
+        .m_rdata(dma_m_rdata),
+        .m_rresp(dma_m_rresp),
+        .m_rlast(dma_m_rlast),
+        .m_rvalid(dma_m_rvalid),
+        .m_rready(dma_m_rready),
+        .m_awid(dma_m_awid),
+        .m_awaddr(dma_m_awaddr),
+        .m_awlen(dma_m_awlen),
+        .m_awsize(dma_m_awsize),
+        .m_awburst(dma_m_awburst),
+        .m_awlock(dma_m_awlock),
+        .m_awcache(dma_m_awcache),
+        .m_awprot(dma_m_awprot),
+        .m_awvalid(dma_m_awvalid),
+        .m_awready(dma_m_awready),
+        .m_wid(dma_m_wid),
+        .m_wdata(dma_m_wdata),
+        .m_wstrb(dma_m_wstrb),
+        .m_wlast(dma_m_wlast),
+        .m_wvalid(dma_m_wvalid),
+        .m_wready(dma_m_wready),
+        .m_bresp(dma_m_bresp),
+        .m_bvalid(dma_m_bvalid),
+        .m_bready(dma_m_bready)
+    );
+    assign dma_s_rid[4] = 1'b0;
+    assign dma_s_bid[4] = 1'b0;
 
 // reserved
 wire [4 :0] axiOut_1_arid   ;
@@ -1190,7 +1233,7 @@ core_top u_cpu(
     .debug0_wb_inst     (debug_wb_inst     ),
     .debug0_wb_rf_wen   (debug_wb_rf_wen   ),
     .debug0_wb_rf_wnum  (debug_wb_rf_wnum  ),
-    .debug_wb_rf_wdata  (debug_wb_rf_wdata )
+    .debug0_wb_rf_wdata (debug_wb_rf_wdata )
 );
 
 // clock sync: from CPU to AXI_Crossbar
