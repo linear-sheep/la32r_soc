@@ -49,9 +49,9 @@ module axi_dvi #
     output  [1:0]    s_rresp,
     output           s_rlast,
     
-    // VRAM Interface
-    output  [31:0]   fb_base,
-    output           fb_en,
+    // VRAM Interface (被修改为由 axi_dma 驱动的输入)
+    input   [31:0]   fb_base,
+    input            fb_en,
     output           fb_valid,
     input   [31:0]   fb_pixel,  // RGB332 扩展后的 32bit 数据
 
@@ -69,8 +69,7 @@ module axi_dvi #
 );
 
     reg [31:0] DVI_RECT_DIR, DVI_RECT_L_W, DVI_SQU_DIR, DVI_SQU_R;
-    reg [31:0] VRAM_BASE_ADDR;  // 0x10: 显存基地址
-    reg [31:0] VRAM_CTRL;       // 0x14: 显存控制位 (Bit 0为1使能)
+    // 移除了 VRAM_BASE_ADDR 和 VRAM_CTRL 寄存器
 
     reg busy, write, R_or_W;
     reg s_wready;
@@ -135,13 +134,11 @@ module axi_dvi #
 
     reg [31:0] s_rdata;
     reg s_rvalid, s_rlast;
-    
+
     wire [31:0] rdata_d =   buf_addr[15:0] ==  16'h0     ? DVI_RECT_DIR         : 
                             buf_addr[15:0] ==  16'h4     ? DVI_RECT_L_W         : 
                             buf_addr[15:0] ==  16'h8     ? DVI_SQU_DIR          : 
                             buf_addr[15:0] ==  16'hc     ? DVI_SQU_R            : 
-                            buf_addr[15:0] ==  16'h10    ? VRAM_BASE_ADDR       :
-                            buf_addr[15:0] ==  16'h14    ? VRAM_CTRL            :
                             32'd0;
 
     always@(posedge aclk) begin
@@ -161,6 +158,7 @@ module axi_dvi #
     end
 
     reg s_bvalid;
+
     always@(posedge aclk) begin
         if(~aresetn) s_bvalid <= 1'b0;
         else if(w_enter) s_bvalid <= 1'b1;
@@ -173,13 +171,11 @@ module axi_dvi #
     assign s_rresp = 2'b0;
 
 //------------------------------- AXI Write Regs ----------------------------//
-    wire write_reg_en[5:0];
+    wire write_reg_en[3:0]; // 从 6 个寄存器缩减为 4 个
     assign write_reg_en[0] = w_enter & (buf_addr[15:0]==16'h0);
     assign write_reg_en[1] = w_enter & (buf_addr[15:0]==16'h4);
     assign write_reg_en[2] = w_enter & (buf_addr[15:0]==16'h8);
     assign write_reg_en[3] = w_enter & (buf_addr[15:0]==16'hc);
-    assign write_reg_en[4] = w_enter & (buf_addr[15:0]==16'h10);
-    assign write_reg_en[5] = w_enter & (buf_addr[15:0]==16'h14);
 
     always @(posedge aclk) begin
         if(!aresetn) begin
@@ -187,16 +183,12 @@ module axi_dvi #
             DVI_RECT_L_W <= 32'h0;
             DVI_SQU_DIR  <= 32'h0;
             DVI_SQU_R    <= 32'h0;
-            VRAM_BASE_ADDR <= 32'h0;
-            VRAM_CTRL      <= 32'h0;
         end
         else begin
             if (write_reg_en[0]) DVI_RECT_DIR <= s_wdata;
             if (write_reg_en[1]) DVI_RECT_L_W <= s_wdata;
             if (write_reg_en[2]) DVI_SQU_DIR  <= s_wdata;
             if (write_reg_en[3]) DVI_SQU_R    <= s_wdata;
-            if (write_reg_en[4]) VRAM_BASE_ADDR <= s_wdata;
-            if (write_reg_en[5]) VRAM_CTRL      <= s_wdata;
         end
     end
 
@@ -206,7 +198,7 @@ module axi_dvi #
     
     reg [31:0] current_vram_base;
     reg        current_vram_en;
-    
+
     always @(posedge aclk) begin
         if (!aresetn) begin
             hdata <= 0;
@@ -218,9 +210,9 @@ module axi_dvi #
                 hdata <= 0;
                 if (vdata == (VMAX - 1)) begin
                     vdata <= 0;
-                    // 在新一帧开始时更新 VRAM 配置以防画面撕裂
-                    current_vram_base <= VRAM_BASE_ADDR;
-                    current_vram_en   <= VRAM_CTRL[0];
+                    // 在新一帧开始时直接从 input 更新 VRAM 配置以防画面撕裂
+                    current_vram_base <= fb_base;
+                    current_vram_en   <= fb_en;
                 end else begin
                     vdata <= vdata + 1;
                 end
@@ -232,13 +224,13 @@ module axi_dvi #
 
     wire hdata_in_range  = (hdata > (DVI_RECT_DIR[31:16]-DVI_RECT_L_W[31:16])) && (hdata < (DVI_RECT_DIR[31:16]+DVI_RECT_L_W[31:16]));
     wire vdata_in_range  = (vdata > DVI_RECT_DIR[15:0]) && (vdata < (DVI_RECT_DIR[15:0]+DVI_RECT_L_W[15:0]));
+    
     wire hdata1_in_range = (hdata > (DVI_SQU_DIR[31:16]-DVI_SQU_R[31:16])) && (hdata < (DVI_SQU_DIR[31:16]+DVI_SQU_R[31:16]));
     wire vdata1_in_range = (vdata > (DVI_SQU_DIR[15:0]-DVI_SQU_R[15:0])) && (vdata < (DVI_SQU_DIR[15:0]+DVI_SQU_R[15:0]));
-    
+
     wire in_visible_area = (hdata < HSIZE) && (vdata < VSIZE);
     
-    assign fb_base  = current_vram_base;
-    assign fb_en    = current_vram_en;
+    // fb_valid 由是否在可视区域决定
     assign fb_valid = current_vram_en && in_visible_area;
 
     // 补偿 VRAM 读取的 1 拍延迟，将同步信号与坐标系打拍对齐
