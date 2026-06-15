@@ -35,19 +35,16 @@ static int verify_result(const uint32_t c_hw[48])
 
     for (r = 0; r < 4; r++) {
         for (c = 0; c < 4; c++) {
-            // Expected: C[r][c] = A[r][c] (since B = identity)
-            uint64_t expected = A[r * 4 + c];
+            uint32_t expected = A[r * 4 + c];
             // Read 66-bit result from 3 words
             uint32_t lo  = c_hw[(r * 4 + c) * 3 + 0];
             uint32_t mid = c_hw[(r * 4 + c) * 3 + 1];
             uint32_t hi  = c_hw[(r * 4 + c) * 3 + 2];
-            uint64_t result = ((uint64_t)(hi & 0x3) << 64) |
-                              ((uint64_t)mid << 32) | lo;
 
-            if (result != expected) {
-                printf("[FAIL] C[%d][%d] = 0x%08x%08x (hi=%d), expected 0x%08x\n",
-                       r, c, (unsigned int)(result >> 32), (unsigned int)result,
-                       hi & 0x3, (unsigned int)expected);
+            // For identity test: check that lo == expected, mid == 0, hi == 0
+            if (lo != expected || mid != 0 || (hi & 0x3) != 0) {
+                printf("[FAIL] C[%d][%d] = %02x:%08x:%08x, expected %08x\n",
+                       r, c, hi & 0x3, mid, lo, expected);
                 errors++;
             }
         }
