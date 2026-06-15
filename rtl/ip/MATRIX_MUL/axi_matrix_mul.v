@@ -158,6 +158,34 @@ module axi_matrix_mul (
     end
 
     // ==========================================
+    // C_DATA read mux (combinational)
+    // ==========================================
+    wire [9:0] c_word_idx;
+    wire [3:0] c_elem_idx;
+    wire [1:0] c_sub_idx;
+    wire [31:0] c_data_read_val;
+
+    assign c_word_idx = (capture_araddr - 10'h0A0) >> 2;
+    assign c_elem_idx = c_word_idx[9:2]; // approx word_idx / 3 for 0..47
+    assign c_sub_idx  = c_word_idx[1:0]; // won't work for /3
+
+    // Map 48 words (0..47) -> 16 elements x 3 sub-words
+    // elem = word_idx / 3, sub = word_idx % 3
+    // Use explicit mux for synthesis compatibility
+    reg [31:0] c_mux_arr [0:47];
+    genvar gi2;
+    generate
+        for (gi2 = 0; gi2 < 16; gi2 = gi2 + 1) begin : c_mux_gen
+            always @(*) begin
+                c_mux_arr[gi2*3 + 0] = c_data_lo[gi2];
+                c_mux_arr[gi2*3 + 1] = c_data_mid[gi2];
+                c_mux_arr[gi2*3 + 2] = c_data_hi[gi2];
+            end
+        end
+    endgenerate
+    assign c_data_read_val = c_mux_arr[c_word_idx];
+
+    // ==========================================
     // AXI Read FSM
     // ==========================================
     reg [4:0]  capture_arid;
@@ -206,7 +234,8 @@ module axi_matrix_mul (
                     10'h080,10'h084,10'h088,10'h08C,
                     10'h090,10'h094,10'h098,10'h09C:
                         s_rdata <= b_data[(capture_araddr-10'h060)>>2];
-                    // C_DATA — 48 registers
+                    // C_DATA — 48 registers (0xA0-0x15C)
+                    // Handled below via c_data_read_val wire
                     10'h0A0,10'h0A4,10'h0A8,10'h0AC,
                     10'h0B0,10'h0B4,10'h0B8,10'h0BC,
                     10'h0C0,10'h0C4,10'h0C8,10'h0CC,
@@ -219,21 +248,7 @@ module axi_matrix_mul (
                     10'h130,10'h134,10'h138,10'h13C,
                     10'h140,10'h144,10'h148,10'h14C,
                     10'h150,10'h154,10'h158,10'h15C: begin
-                        // Each C element spans 3 words (lo, mid, hi)
-                        // Element index = (addr - 0x0A0) / 12 * 4 + ((addr - 0x0A0) % 12) / 3
-                        // Simpler: element = (addr-0xA0)/12*4 + ((addr-0xA0)%12)/3
-                        // Or: addr offset from C base, word index = (addr-0xA0)/4
-                        // element = word_idx/3, sub_idx = word_idx%3
-                        integer word_idx, elem_idx, sub_idx;
-                        word_idx = (capture_araddr - 10'h0A0) >> 2;
-                        elem_idx = word_idx / 3;
-                        sub_idx  = word_idx % 3;
-                        case (sub_idx)
-                            0: s_rdata <= c_data_lo[elem_idx];
-                            1: s_rdata <= c_data_mid[elem_idx];
-                            2: s_rdata <= c_data_hi[elem_idx];
-                            default: s_rdata <= 32'd0;
-                        endcase
+                        s_rdata <= c_data_read_val;
                     end
                     default: s_rdata <= 32'hDEADBEEF;
                 endcase
