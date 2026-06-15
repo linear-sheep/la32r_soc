@@ -276,10 +276,11 @@ module axi_matrix_mul (
     reg [31:0] b_val [0:3]; // B[k][col] for each column
 
     // Multiplier signals
-    wire [3:0] mul_start;
+    reg  [3:0] mul_start;
     wire [3:0] mul_busy;
     wire [3:0] mul_done;
     wire [63:0] mul_product [0:3];
+    reg        mul_start_d;   // delayed start to match a_val/b_val pipeline
 
     // 4 parallel multipliers, one per output column
     genvar g;
@@ -305,7 +306,9 @@ module axi_matrix_mul (
             row          <= 2'd0;
             k            <= 2'd0;
             status_reg   <= 32'd0;
+            mul_start_d  <= 1'b0;
         end else begin
+            mul_start_d <= (fsm_state == FSM_START_MUL);
             case (fsm_state)
                 FSM_IDLE: begin
                     if (start_pulse) begin
@@ -382,10 +385,11 @@ module axi_matrix_mul (
         end
     end
 
-    // Multiplier start pulses (asserted in FSM_START_MUL for one cycle)
-    assign mul_start[0] = (fsm_state == FSM_START_MUL);
-    assign mul_start[1] = (fsm_state == FSM_START_MUL);
-    assign mul_start[2] = (fsm_state == FSM_START_MUL);
-    assign mul_start[3] = (fsm_state == FSM_START_MUL);
+    // Multiplier start pulses (registered, delayed 1 cycle from START_MUL
+    // to allow a_val/b_val to settle after non-blocking assignment)
+    assign mul_start[0] = mul_start_d;
+    assign mul_start[1] = mul_start_d;
+    assign mul_start[2] = mul_start_d;
+    assign mul_start[3] = mul_start_d;
 
 endmodule
