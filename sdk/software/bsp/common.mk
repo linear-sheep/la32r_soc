@@ -39,7 +39,8 @@ C_SRCS   += $(COMMON_DIR)/drivers/core_time.c
 C_SRCS   += $(COMMON_DIR)/drivers/common_func.c
 C_SRCS   += $(COMMON_DIR)/drivers/dvi.c \
 			$(COMMON_DIR)/drivers/led.c \
-			$(COMMON_DIR)/drivers/seg7.c
+			$(COMMON_DIR)/drivers/seg7.c \
+			$(COMMON_DIR)/drivers/matrix_mul.c
 
 INCLUDES += -I./ \
 			-I$(COMMON_DIR)/include \

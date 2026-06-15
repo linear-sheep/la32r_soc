@@ -733,17 +733,45 @@ wire [1 :0] axiOut_7_bresp  ;
 wire        axiOut_7_bvalid ;
 wire        axiOut_7_bready ;
 
-assign axiOut_7_arready = 1'b1;
-assign axiOut_7_rid    = 5'b0;
-assign axiOut_7_rdata  = 32'b0;
-assign axiOut_7_rresp  = 2'b0;
-assign axiOut_7_rlast  = 1'b0;
-assign axiOut_7_rvalid = 1'b0;
-assign axiOut_7_awready = 1'b1;
-assign axiOut_7_wready = 1'b1;
-assign axiOut_7_bid    = 5'b0;
-assign axiOut_7_bresp = 2'b0;
-assign axiOut_7_bvalid = 1'b0;
+axi_matrix_mul u_matrix_mul (
+    .aclk      (sys_clk        ),
+    .aresetn   (sys_resetn     ),
+    .s_awid    (axiOut_7_awid  ),
+    .s_awaddr  (axiOut_7_awaddr),
+    .s_awlen   (axiOut_7_awlen ),
+    .s_awsize  (axiOut_7_awsize),
+    .s_awburst (axiOut_7_awburst),
+    .s_awlock  (axiOut_7_awlock),
+    .s_awcache (axiOut_7_awcache),
+    .s_awprot  (axiOut_7_awprot),
+    .s_awvalid (axiOut_7_awvalid),
+    .s_awready (axiOut_7_awready),
+    .s_wdata   (axiOut_7_wdata ),
+    .s_wstrb   (axiOut_7_wstrb ),
+    .s_wlast   (axiOut_7_wlast ),
+    .s_wvalid  (axiOut_7_wvalid),
+    .s_wready  (axiOut_7_wready),
+    .s_bid     (axiOut_7_bid   ),
+    .s_bresp   (axiOut_7_bresp ),
+    .s_bvalid  (axiOut_7_bvalid),
+    .s_bready  (axiOut_7_bready),
+    .s_arid    (axiOut_7_arid  ),
+    .s_araddr  (axiOut_7_araddr),
+    .s_arlen   (axiOut_7_arlen ),
+    .s_arsize  (axiOut_7_arsize),
+    .s_arburst (axiOut_7_arburst),
+    .s_arlock  (axiOut_7_arlock),
+    .s_arcache (axiOut_7_arcache),
+    .s_arprot  (axiOut_7_arprot),
+    .s_arvalid (axiOut_7_arvalid),
+    .s_arready (axiOut_7_arready),
+    .s_rid     (axiOut_7_rid   ),
+    .s_rdata   (axiOut_7_rdata ),
+    .s_rresp   (axiOut_7_rresp ),
+    .s_rlast   (axiOut_7_rlast ),
+    .s_rvalid  (axiOut_7_rvalid),
+    .s_rready  (axiOut_7_rready)
+);
 
 wire confreg_int;
 

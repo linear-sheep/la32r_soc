@@ -90,6 +90,9 @@ module axi2sram_sp_external #(
     reg [2:0]                state_d;
     reg [2:0]                state_q;
 
+    reg                      last_grant_write_d;
+    reg                      last_grant_write_q;
+
     localparam              IDLE        = 3'h0;
     localparam              READ        = 3'h1;
     localparam              WRITE       = 3'h2;
@@ -139,6 +142,7 @@ module axi2sram_sp_external #(
         // Transaction attributes
         // default assignments
         state_d         = state_q;
+        last_grant_write_d = last_grant_write_q;
         ax_req_d_id     = ax_req_q_id;
         ax_req_d_addr   = ax_req_q_addr;
         ax_req_d_len    = ax_req_q_len;
@@ -171,48 +175,72 @@ module axi2sram_sp_external #(
         case (state_q)
 
             IDLE: begin
-                // Wait for a read or write
-                // ------------
-                // Read
-                // ------------
-                if (s_arvalid) begin
+                // Round-robin between read and write when both are valid.
+                if (s_awvalid && s_arvalid) begin
+                    if (last_grant_write_q) begin
+                        s_arready = 1'b1;
+                        ax_req_d_id     = s_arid;
+                        ax_req_d_addr   = s_araddr;
+                        ax_req_d_len    = s_arlen;
+                        ax_req_d_size   = s_arsize;
+                        ax_req_d_burst  = s_arburst;
+                        state_d        = READ;
+                        req_o          = 1'b1;
+                        addr_o         = s_araddr;
+                        req_addr_d     = s_araddr;
+                        cnt_d          = 1;
+                        last_grant_write_d = 1'b0;
+                    end else begin
+                        s_awready = 1'b1;
+                        s_wready  = 1'b1;
+                        addr_o         = s_awaddr;
+                        ax_req_d_id     = s_awid;
+                        ax_req_d_addr   = s_awaddr;
+                        ax_req_d_len    = s_awlen;
+                        ax_req_d_size   = s_awsize;
+                        ax_req_d_burst  = s_awburst;
+                        if (s_wvalid) begin
+                            req_o          = 1'b1;
+                            we_o           = 1'b1;
+                            state_d        = (s_wlast) ? SEND_B : WRITE_NOP;
+                            cnt_d          = 1;
+                        end else
+                            state_d = WAIT_WVALID;
+                        last_grant_write_d = 1'b1;
+                    end
+                end else if (s_awvalid) begin
+                    s_awready = 1'b1;
+                    s_wready  = 1'b1;
+                    addr_o         = s_awaddr;
+                    ax_req_d_id     = s_awid;
+                    ax_req_d_addr   = s_awaddr;
+                    ax_req_d_len    = s_awlen;
+                    ax_req_d_size   = s_awsize;
+                    ax_req_d_burst  = s_awburst;
+                    if (s_wvalid) begin
+                        req_o          = 1'b1;
+                        we_o           = 1'b1;
+                        state_d        = (s_wlast) ? SEND_B : WRITE_NOP;
+                        cnt_d          = 1;
+                    end else
+                        state_d = WAIT_WVALID;
+                    last_grant_write_d = 1'b1;
+                end else if (s_arvalid) begin
                     s_arready = 1'b1;
-                    // sample ax
                     ax_req_d_id     = s_arid;
                     ax_req_d_addr   = s_araddr;
                     ax_req_d_len    = s_arlen;
                     ax_req_d_size   = s_arsize;
                     ax_req_d_burst  = s_arburst;
                     state_d        = READ;
-                    //  we can request the first address, this saves us time
                     req_o          = 1'b1;
                     addr_o         = s_araddr;
-                    // save the address
                     req_addr_d     = s_araddr;
-                    // save the ar_len
                     cnt_d          = 1;
-                // ------------
-                // Write
-                // ------------
-                end else if (s_awvalid) begin
+                    last_grant_write_d = 1'b0;
+                end else begin
+                    s_arready = 1'b1;
                     s_awready = 1'b1;
-                    s_wready  = 1'b1;
-                    addr_o         = s_awaddr;
-                    // sample ax
-                    ax_req_d_id     = s_awid;
-                    ax_req_d_addr   = s_awaddr;
-                    ax_req_d_len    = s_awlen;
-                    ax_req_d_size   = s_awsize;
-                    ax_req_d_burst  = s_awburst;
-                    // we've got our first w_valid so start the write process
-                    if (s_wvalid) begin
-                        req_o          = 1'b1;
-                        we_o           = 1'b1;
-                        state_d        = (s_wlast) ? SEND_B : WRITE_NOP;
-                        cnt_d          = 1;
-                    // we still have to wait for the first w_valid to arrive
-                    end else
-                        state_d = WAIT_WVALID;
                 end
             end
 
@@ -345,6 +373,7 @@ module axi2sram_sp_external #(
     always @(posedge clk or negedge resetn) begin
         if (~resetn) begin
             state_q         <= IDLE;
+            last_grant_write_q <= 1'b0;
             ax_req_q_addr   <= 32'h0;
             ax_req_q_burst  <= 2'h0;
             ax_req_q_id     <= 'h0;
@@ -354,6 +383,7 @@ module axi2sram_sp_external #(
             cnt_q           <= 8'h0;
         end else begin
             state_q         <= state_d;
+            last_grant_write_q <= last_grant_write_d;
             ax_req_q_addr   <= ax_req_d_addr;
             ax_req_q_burst  <= ax_req_d_burst;
             ax_req_q_id     <= ax_req_d_id;
